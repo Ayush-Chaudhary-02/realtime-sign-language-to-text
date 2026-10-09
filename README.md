@@ -1,180 +1,276 @@
 # Real-Time Sign Language to Text and Voice
 
-![Python](https://img.shields.io/badge/python-3.8%2B-blue)
-![OpenCV](https://img.shields.io/badge/OpenCV-computer%20vision-green)
-![MediaPipe](https://img.shields.io/badge/MediaPipe-hand%20tracking-orange)
-![Status](https://img.shields.io/badge/status-prototype-yellow)
-
-A computer-vision application that reads sign language gestures through an ordinary webcam and turns them into on-screen text and spoken audio in real time. No gloves, depth cameras or special hardware needed.
-
-<!-- TODO: add a demo GIF or screenshot here. This is the single most useful thing you can add to a README.
+<!-- TODO: replace with a real screenshot or demo GIF (docs/demo.gif). This is the first thing people look at. -->
 ![Demo](docs/demo.gif)
--->
 
-## Table of Contents
-
-- [Problem Statement](#problem-statement)
-- [Team](#team)
-- [What We Built and Why](#what-we-built-and-why)
-- [How It Works](#how-it-works)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-- [Usage](#usage)
-- [Troubleshooting](#troubleshooting)
-- [Known Limitations](#known-limitations)
-- [Roadmap](#roadmap)
+*A computer-vision application that reads sign language gestures through an ordinary webcam and turns them into on-screen text and spoken audio as they happen. It tracks hands with MediaPipe, classifies movement over time (not single frames) with a sequence model, and keeps the whole loop fast enough to hold a conversation. No gloves, no depth camera, no special hardware.*
 
 ## Problem Statement
 
-**Sign language to text and voice, in real time.**
+**#3: Sign language to text and voice, in real time** *(submitted by Princy)*
 
-Build a computer-vision application that reads hand gestures through an ordinary webcam and converts sign language into written text or spoken audio as it happens, closing the communication gap between signers and people who do not sign.
+> Build a computer-vision application that reads hand gestures through an ordinary webcam and turns sign language into written text or spoken audio as it happens, closing the gap between signers and people who do not sign. The hard parts are tracking hands reliably, classifying movement rather than single frames, and keeping the whole loop fast enough to hold a conversation.
 
-The hard parts:
+## Full App Flow in Short
 
-- Tracking hands reliably across different lighting, skin tones and backgrounds
-- Classifying movement over time, not just single frames
-- Keeping the full loop fast enough to hold a conversation
+The webcam streams frames to OpenCV. MediaPipe finds the hand(s) and returns 21 landmarks per hand. Those landmarks are normalised and pushed into a sliding window of recent frames. A sequence model reads the window and predicts a sign with a confidence score. Once a prediction is stable, the word is drawn on screen and handed to a background text-to-speech worker so audio never blocks the video loop.
 
-## Team
+## Demo
 
-| Name | USN |
-| --- | --- |
-| Ayush Chaudhary | `[USN]` |
-| `[Team member 2]` | `[USN]` |
+- **Demo video:** `[link]`
+- **Live app (if hosted):** `[link]`
 
-## What We Built and Why
+## Features Implemented
 
-### What we built
+- Live webcam capture with low-latency frame processing.
+- Hand landmark tracking (21 3D points per hand) using MediaPipe.
+- Landmark normalisation so results do not depend on hand size or distance from the camera.
+- Movement-aware classification over a sliding window of frames, not single-frame guesses.
+- Confidence thresholding and prediction smoothing to stop flickering output.
+- Real-time text caption overlay on the video feed.
+- Non-blocking text-to-speech so speech never freezes the camera loop.
+- Runs on a normal laptop with a standard webcam.
 
-- **Live video capture:** reads frames from a standard webcam with low latency.
-- **Hand landmark detection:** extracts 21 3D landmarks per hand per frame.
-- **Gesture classification:** a trained model maps landmark data to recognised signs.
-- **Text output:** recognised signs appear on screen as text.
-- **Voice output:** recognised words are spoken aloud using a text-to-speech engine.
+## How We Approached the Problem
 
-### Why we built it
+The problem statement names three hard parts, so the design is built around them.
 
-Many sign language translation systems depend on sensor gloves or fixed, specialised setups, which makes them expensive and hard to deploy. Ours runs on a normal laptop webcam, so it is cheap, portable and easy to try.
+**1. Tracking hands reliably.** Instead of feeding raw pixels to a model, we use MediaPipe to reduce each frame to 21 landmarks per hand. This makes the system far less sensitive to lighting, skin tone and background than a pixel-based CNN. Coordinates are made relative to the wrist and scaled, so the same sign looks the same at different distances.
 
-## How It Works
+**2. Classifying movement, not single frames.** Many signs are defined by motion, so a single frame is not enough. We keep a sliding window of the last N frames of landmark data and classify the whole sequence with an LSTM. Predictions only count once they pass a confidence threshold and stay stable for a few consecutive windows.
 
-```text
-Webcam stream
-     │
-     ▼
-Frame capture and preprocessing   (OpenCV)
-     │
-     ▼
-Hand landmark extraction          (MediaPipe)
-     │
-     ▼
-Gesture classification            (trained model)
-     │
-     ├──────────────┐
-     ▼              ▼
-On-screen text   Text-to-speech
+**3. Keeping the loop fast.** Landmarks are tiny compared with images, so the classifier is small and quick. Text-to-speech runs in its own thread with a queue, so audio playback never delays the next frame.
+
+<!-- TODO: edit the three paragraphs above so they describe exactly what your code does (window size, model type, thresholds). -->
+
+## Trade-offs We Made
+
+- **Landmarks instead of raw images:** faster and more robust to lighting, but we lose facial expression and body posture, which matter in real sign languages.
+- **Small sequence model (LSTM) instead of a large Transformer:** trains on a small dataset and runs in real time on a laptop CPU, but it is limited to short, isolated signs.
+- **Restricted vocabulary:** we focused on getting a smaller set of signs accurate and fast rather than covering many signs poorly.
+- **Offline text-to-speech:** works without internet and responds instantly, but the voice sounds more robotic than cloud services.
+
+<!-- TODO: keep only the trade-offs that are true for your project. -->
+
+# App Architecture
+
+```mermaid
+flowchart TB
+    CAM["Webcam<br>Live video stream"]
+    CAP["Capture and Preprocess (OpenCV)<br>Resize | Flip | BGR to RGB"]
+    HAND["Hand Tracking (MediaPipe)<br>21 landmarks per hand"]
+    FEAT["Feature Engineering<br>Wrist-relative, scale-normalised coordinates"]
+    BUF["Sliding Window Buffer<br>Last N frames"]
+    MODEL["Gesture Classifier (LSTM)<br>Predicted sign + confidence"]
+    SMOOTH["Post-processing<br>Confidence threshold | Majority vote | Debounce"]
+    UI["On-screen Text<br>Caption overlay"]
+    TTS["Text-to-Speech Worker<br>Non-blocking audio queue"]
+
+    CAM --> CAP --> HAND --> FEAT --> BUF --> MODEL --> SMOOTH
+    SMOOTH --> UI
+    SMOOTH --> TTS
 ```
 
-1. OpenCV grabs each frame from the webcam.
-2. MediaPipe detects the hand(s) and returns landmark coordinates.
-3. The landmarks are fed to the classifier, which predicts the sign.
-4. The predicted word is shown on screen and passed to the text-to-speech engine.
+## Flow Summary
+
+*Step-by-step breakdown of what happens on every frame*
+
+### `01` Entry Point
+
+**`main.py`** opens the webcam, loads the trained model, starts the text-to-speech worker and runs the main loop.
+
+### `02` Capture and Preprocessing
+
+OpenCV reads a frame, mirrors it for a natural feel and converts it to RGB for MediaPipe.
+
+### `03` Hand Landmark Extraction
+
+MediaPipe returns 21 landmarks per hand. If no hand is found, the frame is skipped and the buffer is handled gracefully.
+
+### `04` Feature Engineering
+
+Landmarks are made wrist-relative and scale-normalised, then flattened into one feature vector per frame.
+
+### `05` Temporal Buffering
+
+The last N feature vectors are kept in a sliding window so the model sees motion, not just a pose.
+
+### `06` Classification
+
+The sequence model predicts a sign and a confidence score for the current window.
+
+### `07` Post-processing
+
+A prediction is accepted only if it passes the confidence threshold and stays consistent across several windows. This removes flicker and accidental triggers.
+
+### `08` Output
+
+The accepted word is drawn on the video feed and pushed to the text-to-speech queue, which a background thread speaks aloud.
 
 ## Tech Stack
 
-| Area | Tools |
-| --- | --- |
-| Language | Python 3.8+ |
-| Computer vision | OpenCV, MediaPipe |
-| Machine learning | `[TensorFlow / PyTorch / scikit-learn: keep only what you use]`, NumPy |
-| Speech | `[pyttsx3 / gTTS: keep only what you use]` |
-| Interface | `[OpenCV window / Tkinter / Streamlit: keep only what you use]` |
+*Exact versions are pinned in `requirements.txt`*
 
-<!-- TODO: make this table match requirements.txt exactly. -->
+### Core
+
+| **Python**   3.8+ | **OpenCV**   Video capture | **MediaPipe**   Hand tracking | **NumPy**   Numerics |
+| ----------------- | -------------------------- | ----------------------------- | -------------------- |
+
+### Machine Learning
+
+| **`[TensorFlow / PyTorch]`**   Sequence model | **`[scikit-learn]`**   Utilities / metrics |
+| --------------------------------------------- | ------------------------------------------ |
+
+### Speech and Interface
+
+| **`[pyttsx3 / gTTS]`**   Text-to-speech | **`[OpenCV window / Tkinter / Streamlit]`**   Interface |
+| --------------------------------------- | ------------------------------------------------------- |
+
+<!-- TODO: keep only the libraries you actually use. -->
+
+## Component Interaction Flow
+
+```mermaid
+sequenceDiagram
+    participant U as Signer
+    participant C as Capture Loop
+    participant M as MediaPipe
+    participant B as Frame Buffer
+    participant L as Classifier
+    participant D as Display
+    participant S as TTS Worker
+
+    loop Every frame
+        C->>M: Send RGB frame
+        M-->>C: 21 hand landmarks (or none)
+        C->>B: Append normalised features
+        B->>L: Window of N frames (when full)
+        L-->>C: Sign + confidence
+        C->>D: Draw caption on frame
+        opt Prediction is stable
+            C->>S: Queue word for speech
+        end
+    end
+    S-->>U: Spoken audio
+```
 
 ## Project Structure
 
 ```text
 realtime-sign-language-to-text/
-├── data/              # Dataset samples and training logs
-├── models/            # Trained model weights
-├── utils/             # Landmark extraction and preprocessing helpers
-├── main.py            # Entry point: launches the application
-├── requirements.txt   # Python dependencies
+├── data/                  # Dataset samples and training logs
+├── models/                # Trained model weights (.h5 / .pkl)
+├── utils/                 # Landmark extraction and preprocessing helpers
+├── main.py                # Entry point: launches the real-time app
+├── requirements.txt       # Python dependencies
 ├── .gitignore
 └── README.md
 ```
 
-<!-- TODO: update this tree to match the real repository. -->
+<!-- TODO: update this tree to match your real repo, including any training or data-collection scripts. -->
 
-## Getting Started
+## Quick Start
+
+*Get up and running in a few minutes*
 
 ### Prerequisites
 
-- Python 3.8 or newer
-- A working webcam
-- Git
+| **Python**   3.8 or higher | **Webcam**   Built-in or USB | **Git**   To clone the repo |
+| -------------------------- | ---------------------------- | --------------------------- |
 
-### Installation
+### `01` Clone the Repository
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/Ayush-Chaudhary-02/realtime-sign-language-to-text.git
 cd realtime-sign-language-to-text
+```
 
-# 2. Create a virtual environment
+### `02` Create and Activate a Virtual Environment
+
+```bash
 python -m venv venv
 
-# 3. Activate it
-#    Windows:
+# Windows
 venv\Scripts\activate
-#    macOS / Linux:
-source venv/bin/activate
 
-# 4. Install dependencies
+# macOS / Linux
+source venv/bin/activate
+```
+
+### `03` Install Dependencies
+
+```bash
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## Usage
+### `04` Run the Application
 
 ```bash
 python main.py
 ```
 
-1. Allow the app to access your camera if your OS asks.
-2. Sit in a well-lit area with your hand(s) clearly in frame.
-3. Perform a sign. The recognised text appears on screen and is spoken aloud.
-4. Press **`q`** to quit.
+Allow camera access if your operating system asks.
 
-**Tips for best results:** use even lighting, a plain background, and keep your hands fully inside the frame.
+### Controls
+
+| Key | Action |
+| --- | ------ |
+| `q` | Quit the application |
+
+### Tips for Best Results
+
+- Use even, bright lighting and face the camera.
+- Keep your hand(s) fully inside the frame.
+- A plain background gives the most stable tracking.
+- Pause briefly between signs so each one is registered cleanly.
+
+## Supported Signs
+
+| Sign / Word | Notes |
+| ----------- | ----- |
+| `[sign 1]`  | `[e.g. static / moving]` |
+| `[sign 2]`  | `[ ]` |
+| `[sign 3]`  | `[ ]` |
+
+<!-- TODO: list every sign the model can recognise. Judges and users will look for this. -->
+
+## Performance
+
+| Metric | Result |
+| ------ | ------ |
+| Frame rate | `[xx FPS on <your hardware>]` |
+| End-to-end latency (sign to text) | `[xx ms]` |
+| Model accuracy | `[xx% on <test set / how tested>]` |
+
+<!-- TODO: fill in real measured numbers, or delete this section. Do not guess. -->
 
 ## Troubleshooting
 
 | Problem | Fix |
-| --- | --- |
-| Camera does not open | Close other apps using the webcam, and check OS camera permissions for Python/your terminal. |
-| Wrong camera is used | Change the camera index in `main.py` (for example `0` to `1`). |
-| `pip install` fails | Make sure you are on Python 3.8+ and inside the virtual environment. |
-| No voice output | Check your system volume and that your speech library installed correctly. |
-| Laggy or low FPS | Close heavy apps, improve lighting, or lower the capture resolution. |
+| ------- | --- |
+| Camera does not open | Close other apps using the webcam and check camera permissions for your terminal or Python. |
+| Wrong camera opens | Change the camera index in `main.py` (for example `0` to `1`). |
+| `pip install` fails | Confirm Python 3.8+ and that the virtual environment is active. |
+| No voice output | Check system volume and that your text-to-speech library installed correctly. |
+| Low FPS or lag | Close heavy apps, improve lighting, or lower the capture resolution. |
 
-## Known Limitations
+## Project Limitations and Assumptions
 
-- **Isolated signs, not full sentences.** The prototype handles individual words or letters; grammatical sentence-level translation is not supported yet.
-- **Small vocabulary.** The model is trained on a limited set of signs (`[list or number of supported signs]`).
-- **Sensitive to environment.** Tracking degrades in very low light or cluttered backgrounds.
-- **Desktop only.** No mobile or browser version yet.
-- **Accuracy:** `[add your measured accuracy and how you tested it, or remove this line]`
+- Recognises isolated signs and a limited vocabulary; full sentence-level grammar translation is not supported.
+- Tracking quality drops in very low light or very cluttered backgrounds.
+- Assumes one signer is clearly visible and facing the camera.
+- Uses hand landmarks only; facial expressions and body posture are not captured.
+- Desktop only; no mobile or browser version yet.
+- Trained on a small dataset, so accuracy may drop for signing styles it has not seen.
 
-## Roadmap
+## Future Roadmap
 
-- [ ] Expand the dataset and supported vocabulary
-- [ ] Add sequence models (for example Transformers) for continuous signing
+- [ ] Expand the dataset and vocabulary
+- [ ] Add Transformer-based models for continuous signing and sentence-level translation
+- [ ] Include facial and body landmarks for richer meaning
 - [ ] Improve robustness to lighting and backgrounds
-- [ ] Browser-based version (WebRTC / MediaPipe Web)
+- [ ] Browser version using MediaPipe Web and WebRTC
 - [ ] Mobile app for Android and iOS
 
 ## Acknowledgements
@@ -183,6 +279,7 @@ python main.py
 - [OpenCV](https://opencv.org/) for video capture and processing
 - `[Dataset or other sources you used]`
 
-## License
+---
 
-`[Add a license, for example MIT, and a LICENSE file. Without one, others cannot legally reuse your code.]`
+*Made by Ayush Chaudhary*
+*Let's connect on [LinkedIn](https://linkedin.com/in/your-handle)*
