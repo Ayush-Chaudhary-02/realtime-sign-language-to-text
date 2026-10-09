@@ -237,9 +237,6 @@ Allow camera access if your operating system asks.
 | Metric | Result |
 | ------ | ------ |
 | Frame rate | `[60 FPS]` |
-| End-to-end latency (sign to text) | `[xx ms]` |
-| Model accuracy | `[xx% on <test set / how tested>]` |
-
 <!-- TODO: fill in real measured numbers, or delete this section. Do not guess. -->
 
 ## Troubleshooting
@@ -287,4 +284,4 @@ MEMBERS:
 2392608100 Shaurya Tripathi
 2392608078 Arsh Shukla
 2392608008 Priyansh Singh*
-*Let's connect on [LinkedIn]()*
+*Let's connect on [LinkedIn](https://www.linkedin.com/in/yashraj-gurejani-3a68a340b?utm_source=share_via&utm_content=profile&utm_medium=member_ios)*
