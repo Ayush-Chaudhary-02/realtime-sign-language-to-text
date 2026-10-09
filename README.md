@@ -1,42 +1,68 @@
-# 🤟 Real-Time Sign Language to Text and Voice
+# Real-Time Sign Language to Text and Voice
 
-> Bridging the communication gap between sign language users and non-signers through computer vision and real-time audio synthesis.
+> A robust, computer-vision-powered application that translates sign language gestures into written text and natural-sounding speech in real time using an ordinary webcam.
 
 ---
 
-## 📌 1. Chosen Problem Statement
+## Table of Contents
+1. [Project Overview](#-1-project-overview)
+2. [Team Members & USNs](#-2-team-members--usns)
+3. [Problem Statement](#-3-problem-statement)
+4. [What We Built & Why](#-4-what-we-built--why)
+5. [System Architecture & Workflow](#-5-system-architecture--workflow)
+6. [Tech Stack & Dependencies](#-6-tech-stack--dependencies)
+7. [Project Directory Structure](#-7-project-directory-structure)
+8. [Installation & Setup Instructions](#-8-installation--setup-instructions)
+9. [How to Run the Application](#-9-how-to-run-the-application)
+10. [Unfinished Features & Known Limitations](#-10-unfinished-features--known-limitations)
+11. [Future Roadmap](#-11-future-roadmap)
+
+---
+
+## 📌 1. Project Overview
+Communication barriers between sign language users and non-signers create daily challenges in public and professional spaces. This project implements an end-to-end computer vision and machine learning pipeline that captures hand landmarks via a standard webcam, classifies spatial-temporal motion patterns, and instantly converts them into readable text and synthesized audio output.
+
+---
+
+## 👥 2. Team Members & USNs
+* **Ayush Chaudhary** – [Your USN Here]
+* *[Team Member 2 Name]* – *[USN]*
+
+---
+
+## 🎯 3. Problem Statement
 **Sign language to text and voice, in real time**  
 Build a computer-vision application that reads hand gestures through an ordinary webcam and turns sign language into written text or spoken audio as it happens, closing the gap between signers and people who do not sign. The hard parts are tracking hands reliably, classifying movement rather than single frames, and keeping the whole loop fast enough to hold a conversation.
 
 ---
 
-## 👥 2. Team Member Names + USNs
-* **Ayush Chaudhary** – [Your USN Here]
-* *(Add other team members here if applicable)*
-
----
-
-## 💡 3. What We Built & Why
+## 💡 4. What We Built & Why
 
 ### What We Built
-A lightweight desktop/web application that captures video input from a standard webcam, tracks hand landmarks frame-by-frame, and processes spatial-temporal movement patterns using machine learning to predict sign gestures. The recognized signs are dynamically displayed as text on screen and converted into spoken voice output.
+* **Real-Time Video Capture & Preprocessing:** Interfaces with standard webcams to process live video streams with minimal latency.
+* **Hand Landmark Detection:** Leverages advanced coordinate tracking frameworks to isolate 21 3D hand knuckle coordinates per hand frame.
+* **Spatial-Temporal Classification:** Maps frame sequences over time to recognize dynamic gesture patterns rather than isolated static frames.
+* **Text-to-Speech (TTS) Synthesis:** Instantly converts successfully recognized word tokens into audible speech output to facilitate a two-way conversation loop.
 
 ### Why We Built It
-Millions of individuals rely on sign language as their primary mode of communication, yet society often lacks accessible translation tools in everyday public spaces. Traditional translation solutions are usually expensive, hardware-heavy, or restricted to static alphabets (like simple finger-spelling). We wanted to build a practical, software-first tool using an ordinary webcam to make real-time, fluid conversations accessible anywhere.
+Most existing sign language translation systems rely on expensive, proprietary hardware gloves or restricted stationary setups. By building a software-first solution that functions purely via an ordinary laptop webcam, we aim to deliver an accessible, affordable, and easily deployable tool that bridges daily communication gaps.
 
 ---
 
-## ⚙️ 4. Clear Run & Installation Instructions
+## 📊 5. System Architecture & Workflow
 
-Follow these steps to set up and run the project locally on your machine:
-
-### Prerequisites
-* Python 3.8 or higher installed on your system.
-* A working webcam.
-
-### Step-by-Step Setup
-
-1. **Clone the repository:**
-   ```bash
-   git clone [https://github.com/your-username/sign-language-translator.git](https://github.com/your-username/sign-language-translator.git)
-   cd sign-language-translator
+```text
+[Webcam Stream] 
+       │
+       ▼
+[Frame Capture & Preprocessing (OpenCV)]
+       │
+       ▼
+[Hand Landmark Extraction (MediaPipe)]
+       │
+       ▼
+[Gesture Classification Model (LSTM / ML Classifier)]
+       │
+       ├─────────────────────────┐
+       ▼                         ▼
+[Text UI Display]      [Text-to-Speech Engine (Audio)]
