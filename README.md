@@ -3,22 +3,18 @@
 <!-- TODO: replace with a real screenshot or demo GIF (docs/demo.gif). This is the first thing people look at. -->
 ![Demo](docs/demo.gif)
 
-*A computer-vision application that reads sign language gestures through an ordinary webcam and turns them into on-screen text and spoken audio as they happen. It tracks hands with MediaPipe, classifies movement over time (not single frames) with a sequence model, and keeps the whole loop fast enough to hold a conversation. No gloves, no depth camera, no special hardware.*
+*A computer-vision webpage that reads sign language gestures through an ordinary webcam and turns them into on-screen text and spoken audio as they happen. It tracks hands with MediaPipe, classifies movement over time (not single frames) with a sequence model, and keeps the whole loop fast enough to hold a conversation. No gloves, no depth camera, no special hardware.*
 
 ## Problem Statement
 
 **#3: Sign language to text and voice, in real time** *(submitted by Princy)*
 
-> Build a computer-vision application that reads hand gestures through an ordinary webcam and turns sign language into written text or spoken audio as it happens, closing the gap between signers and people who do not sign. The hard parts are tracking hands reliably, classifying movement rather than single frames, and keeping the whole loop fast enough to hold a conversation.
+> Build a computer-vision webpage that reads hand gestures through an ordinary webcam and turns sign language into written text or spoken audio as it happens, closing the gap between signers and people who do not sign. The hard parts are tracking hands reliably, classifying movement rather than single frames, and keeping the whole loop fast enough to hold a conversation.
 
-## Full App Flow in Short
+## Full Web Page in Short
 
 The webcam streams frames to OpenCV. MediaPipe finds the hand(s) and returns 21 landmarks per hand. Those landmarks are normalised and pushed into a sliding window of recent frames. A sequence model reads the window and predicts a sign with a confidence score. Once a prediction is stable, the word is drawn on screen and handed to a background text-to-speech worker so audio never blocks the video loop.
 
-## Demo
-
-- **Demo video:** `[link]`
-- **Live app (if hosted):** `[link]`
 
 ## Features Implemented
 
@@ -52,7 +48,7 @@ The problem statement names three hard parts, so the design is built around them
 
 <!-- TODO: keep only the trade-offs that are true for your project. -->
 
-# App Architecture
+# Web page Architecture
 
 ```mermaid
 flowchart TB
@@ -216,7 +212,7 @@ Allow camera access if your operating system asks.
 
 | Key | Action |
 | --- | ------ |
-| `q` | Quit the application |
+| `cmd+q` | Quit the web pge |
 
 ### Tips for Best Results
 
@@ -229,9 +225,10 @@ Allow camera access if your operating system asks.
 
 | Sign / Word | Notes |
 | ----------- | ----- |
-| `[sign 1]`  | `[e.g. static / moving]` |
-| `[sign 2]`  | `[ ]` |
-| `[sign 3]`  | `[ ]` |
+| `Peace`  | `v sign` |
+| `Silence`  | `Finger on lip` |
+| `Yes`  | `Thumbs up` |
+| `No` | `Thumbs down`|  
 
 <!-- TODO: list every sign the model can recognise. Judges and users will look for this. -->
 
@@ -239,7 +236,7 @@ Allow camera access if your operating system asks.
 
 | Metric | Result |
 | ------ | ------ |
-| Frame rate | `[xx FPS on <your hardware>]` |
+| Frame rate | `[60 FPS]` |
 | End-to-end latency (sign to text) | `[xx ms]` |
 | Model accuracy | `[xx% on <test set / how tested>]` |
 
@@ -281,5 +278,13 @@ Allow camera access if your operating system asks.
 
 ---
 
-*Made by Ayush Chaudhary*
-*Let's connect on [LinkedIn](https://linkedin.com/in/your-handle)*
+*Made by TEAM: 2392608161-ISHOWCODE
+NAME: Yashraj Gurejani
+USN: 2392608161
+MEMBERS:
+2392608012 Yash Khemnani
+2392608001 Ayush Chaudhary
+2392608100 Shaurya Tripathi
+2392608078 Arsh Shukla
+2392608008 Priyansh Singh*
+*Let's connect on [LinkedIn]()*
